@@ -1,0 +1,49 @@
+import praw
+import time
+r = praw.Reddit("CCMemeBot")
+ccMemes = r.subreddit("cryptocurrencymemes")
+cc = r.subreddit("CryptoCurrency")
+last_memes = []
+memes = []
+top_meme = None
+MILLIS_IN_HOUR = 60*60
+
+
+def get_memes():
+    global json_data
+    global top_meme
+    global memes
+    global last_memes
+    while(True):
+        # deleting old memes from list
+        memes.clear()
+        if len(last_memes) > 5:
+            oldest_meme = len(last_memes) - 1
+            while len(last_memes) > 5:
+                memes.pop(oldest_meme)
+
+        # getting top 5 memes
+        i = 1
+        for submission in cc.top('day', limit=5):
+            print('Getting post #' + str(i) + ' ' + submission.title + '\n')
+            memes.append(submission)
+            i += 1
+
+        # handling if there are no old memes
+        if len(last_memes) == 0:
+            top_meme = memes[0]
+            last_memes.append(top_meme)
+            print('Top meme is :' + top_meme.title)
+
+        # finding original meme if meme is the same as an old meme
+        else:
+            i = 0
+            while memes[i] in last_memes:
+                i += 1
+            top_meme = memes[i]
+            print('Top meme is :' + top_meme.title)
+            last_memes.append(top_meme)
+        time.sleep(10)
+
+
+get_memes()
