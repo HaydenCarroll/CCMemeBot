@@ -1,49 +1,239 @@
 import praw
 import time
+import pickle
+from configparser import ConfigParser
 r = praw.Reddit("CCMemeBot")
 ccMemes = r.subreddit("cryptocurrencymemes")
-cc = r.subreddit("CryptoCurrency")
+cc = r.subreddit("CryptoMarkets")
+
+config = ConfigParser()
+config_wiki = cc.wiki['memebotsettings'].content_md
+config.read_string(config_wiki)
+
+last_memes_backup_file = None
+last_runner_up_memes_backup_file = None
 last_memes = []
+last_runner_up_memes = []
 memes = []
+runner_up_memes = []
 top_meme = None
+top_runner_up_meme = None
 MILLIS_IN_HOUR = 60*60
+top_meme_comment_info = None
+runner_up_meme_comment_info = None
+top_meme_comment_custom_message = config['Settings']['message']
+runner_up_meme_comment_custom_message = config['Settings']['runner_up_message']
+flair = config['Settings']['winner_flair']
+runner_up_flair = config['Settings']['runner_up_flair']
+flaired_memes = []
+flaired_runner_up_memes = []
+winner_flair = config['Settings']['winner_flair_winner']
+runner_up_winner_flair = config['Settings']['runner_up_winner_flair']
+hours_to_wait = int(config['Settings']['time_between_posts']) * MILLIS_IN_HOUR
 
 
+# main funciton
 def get_memes():
-    global json_data
     global top_meme
     global memes
     global last_memes
+    global top_meme_comment_info
+    global flaired_memes
+    global flaired_runner_up_memes
+    global last_runner_up_memes
+    global last_runner_up_memes_backup_file
+    global last_memes_backup_file
+
     while(True):
         # deleting old memes from list
         memes.clear()
+        flaired_memes.clear()
+        load_files()
         if len(last_memes) > 5:
             oldest_meme = len(last_memes) - 1
             while len(last_memes) > 5:
                 memes.pop(oldest_meme)
+                oldest_meme -= 1
 
-        # getting top 5 memes
+        # deleting old runner up memes from list
+        if len(last_runner_up_memes) > 5:
+            oldest_meme = len(last_runner_up_memes) - 1
+            while len(last_runner_up_memes) > 5:
+                memes.pop(oldest_meme)
+                oldest_meme -= 1
+
+        # getting top 100 memes
         i = 1
-        for submission in cc.top('day', limit=5):
+        for submission in ccMemes.top('day', limit=100):
             print('Getting post #' + str(i) + ' ' + submission.title + '\n')
+            # checking for flair
+            if submission.link_flair_text is not None and submission.link_flair_text.contains(flair):
+                flaired_memes.append(i - 1)
+            if submission.link_flair_text is not None and submission.link_flair_text.contains(runner_up_flair):
+                flaired_runner_up_memes.append(i-1)
             memes.append(submission)
             i += 1
 
-        # handling if there are no old memes
-        if len(last_memes) == 0:
-            top_meme = memes[0]
-            last_memes.append(top_meme)
-            print('Top meme is :' + top_meme.title)
+        # replacing memes with flaired memes
+        if len(flaired_memes) > 0:
+            priority_memes = []
+            for flaired_meme in flaired_memes:
+                if not is_repost(memes[flaired_meme]):
+                    priority_memes.append(memes[flaired_meme])
 
-        # finding original meme if meme is the same as an old meme
+            if len(priority_memes) > 0:
+                memes = priority_memes
+
+        assign_top_meme()
+        assign_runner_up_meme()
+        save_files()
+        time.sleep(hours_to_wait)
+
+
+# assigning the runner up meme
+def assign_runner_up_meme():
+    global top_runner_up_meme
+    global runner_up_memes
+    global last_runner_up_memes
+    global runner_up_meme_comment_info
+    global runner_up_meme_comment_custom_message
+    # handling if there are no old memes
+    if len(last_runner_up_memes) == 0:
+        print('No runner up memes')
+        return
+
+    # finding original meme if meme is the same as an old meme
+    else:
+        i = 0
+        while runner_up_memes[i] in last_runner_up_memes:
+            if i == len(runner_up_memes) - 1:
+                break
+            i += 1
+        top_runner_up_meme = runner_up_memes[i]
+        print('Runner up meme is :' + top_runner_up_meme.title)
+        runner_up_meme_comment_info = (
+                'Author: ' + top_runner_up_meme.name + '\n' +
+                'Permalink: ' + top_runner_up_meme.permalink + '\n' +
+                runner_up_meme_comment_custom_message
+        )
+        print('Runner up meme comment info \n' + runner_up_meme_comment_info)
+        last_runner_up_memes.append(top_runner_up_meme)
+
+
+def assign_top_meme():
+    global top_meme
+    global memes
+    global last_memes
+    global top_meme_comment_info
+    # handling if there are no old memes
+    if len(last_memes) == 0:
+        top_meme = memes[0]
+        last_memes.append(top_meme)
+        print('Top meme is :' + top_meme.title)
+        top_meme_comment_info = (
+                'Author: ' + top_meme.author.name + '\n' +
+                'Permalink: ' + top_meme.permalink + '\n' +
+                top_meme_comment_custom_message
+        )
+        print('Top meme comment info \n' + top_meme_comment_info)
+
+    # finding original meme if meme is the same as an old meme
+    else:
+        i = 0
+        while memes[i] in last_memes:
+            if i == len(memes) - 1:
+                break
+            i += 1
+        top_meme = memes[i]
+        print('Top meme is :' + top_meme.title)
+        top_meme_comment_info = (
+                'Author: ' + top_meme.author.name + '\n' +
+                'Permalink: ' + top_meme.permalink + '\n' +
+                top_meme_comment_custom_message
+        )
+        print('Top meme comment info \n' + top_meme_comment_info)
+        last_memes.append(top_meme)
+
+
+# checking for repost
+def is_repost(check_meme):
+    global top_meme
+    global memes
+    global last_memes
+    global top_meme_comment_info
+    if len(last_memes) == 0:
+        return False
+    else:
+        if check_meme in last_memes:
+            return True
+        elif check_meme in last_runner_up_memes:
+            return True
         else:
-            i = 0
-            while memes[i] in last_memes:
-                i += 1
-            top_meme = memes[i]
-            print('Top meme is :' + top_meme.title)
-            last_memes.append(top_meme)
-        time.sleep(10)
+            return False
 
+
+# method for loading backup files
+def load_files():
+    global last_runner_up_memes
+    global last_memes
+    global last_runner_up_memes_backup_file
+    global last_memes_backup_file
+    try:
+
+        last_memes_backup_file = open('Last_Memes_Backup', 'rb')
+
+    except FileNotFoundError:
+        print('memes backup file not found, creating backup file')
+        last_memes_backup_file = open('Last_Memes_Backup', 'wb')
+        last_memes_backup_file.close()
+        last_memes_backup_file = open('Last_Memes_Backup', 'rb')
+
+    try:
+        last_runner_up_memes_backup_file = open('Last_Runner_Up_Backup', 'rb')
+    except FileNotFoundError:
+        print('runner up backup file not found, creating backup file')
+        last_runner_up_memes_backup_file = open('Last_Runner_Up_Backup', 'wb')
+        last_runner_up_memes_backup_file.close()
+        last_runner_up_memes_backup_file = open('Last_Runner_Up_Backup', 'rb')
+
+    try:
+        last_memes = pickle.load(last_memes_backup_file)
+        print('Successfully loaded last_memes')
+    except:
+        error_log = open('log.txt', 'w')
+        error_log.write("Filed to load last_memes, file may be corrupt")
+
+    try:
+
+        last_runner_up_memes = pickle.load(last_runner_up_memes_backup_file)
+        print('Successfully loaded last_runner_up_memes')
+    except:
+        error_log = open('log.txt', 'w')
+        error_log.write("Filed to load last_runner_up_memes, file may be corrupt")
+
+    last_runner_up_memes_backup_file.close()
+    last_memes_backup_file.close()
+
+
+# method for saving backup files
+def save_files():
+    global last_runner_up_memes
+    global last_memes
+    global last_runner_up_memes_backup_file
+    global last_memes_backup_file
+
+    try:
+        last_runner_up_memes_backup_file = open('Last_Runner_Up_Backup', 'wb')
+        pickle.dump(last_runner_up_memes, last_runner_up_memes_backup_file)
+    except:
+        print('error')
+
+    try:
+        last_memes_backup_file = open('Last_Memes_Backup', 'wb')
+        pickle.dump(last_memes, last_memes_backup_file)
+    except:
+        print('error')
+    last_runner_up_memes_backup_file.close()
+    last_memes_backup_file.close()
 
 get_memes()
