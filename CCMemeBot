@@ -5,10 +5,10 @@ import datetime
 from configparser import ConfigParser
 r = praw.Reddit("CCMemeBot")
 ccMemes = r.subreddit("cryptocurrencymemes")
-cc = r.subreddit("CryptoMarkets")
+Crypto_Markets = r.subreddit("CryptoMarkets")
 
 config = ConfigParser()
-config_wiki = cc.wiki['memebotsettings'].content_md
+config_wiki = Crypto_Markets.wiki['memebotsettings'].content_md
 config.read_string(config_wiki)
 
 last_memes_backup_file = None
@@ -148,7 +148,7 @@ def assign_top_meme():
         last_memes.append(top_meme)
         print('Top meme is :' + top_meme.title)
         top_meme_comment_info = (
-                'Author: ' + top_meme.author.name + '\n' +
+                'Author: ' + top_meme.author.name + '\n' + '\n' +
                 'Permalink: ' + top_meme.permalink + '\n' + '\n' +
                 top_meme_comment_custom_message
         )
@@ -159,22 +159,18 @@ def assign_top_meme():
             print("no flair")
         last_memes.append(top_meme)
         # Crossposting meme
-        s = None
-        for t in cc.top('day', limit=3):
-            s = t
-        choices = s.flair.choices()
+        cross_post = top_meme.crosspost(subreddit=Crypto_Markets,
+                                        send_replies=False)
+        choices = cross_post.flair.choices()
         template_id = next(x for x in choices
                            if x['flair_text_editable'])['flair_template_id']
-        nsfw = False
+        cross_post.flair.select(template_id, final_winner_flair)
         if top_meme.over_18:
-            nsfw = True
-        spoiler = False
+            cross_post.mod.nsfw()
         if top_meme.spoiler:
-            spoiler = True
-        cross_post = top_meme.crosspost(subreddit=cc, send_replies=False, flair_id=template_id,
-                                        flair_text=final_winner_flair, nsfw=nsfw, spoiler=spoiler)
+            cross_post.mod.spoiler()
         top_meme_comment = cross_post.reply(top_meme_comment_info)
-        top_meme_comment.distinguish(how='yes', sticky=True)
+        top_meme_comment.mod.distinguish(how='yes', sticky=True)
 
     # finding original meme if meme is the same as an old meme
     else:
@@ -189,7 +185,7 @@ def assign_top_meme():
         top_meme = memes[i]
         print('Top meme is :' + top_meme.title)
         top_meme_comment_info = (
-                'Author: ' + top_meme.author.name + '\n' +
+                'Author: ' + top_meme.author.name + '\n' + '\n' +
                 'Permalink: ' + top_meme.permalink + '\n' + '\n' +
                 top_meme_comment_custom_message
         )
@@ -199,23 +195,20 @@ def assign_top_meme():
         if top_meme.link_flair_text is None:
             print("no flair")
         last_memes.append(top_meme)
+
         # Crossposting meme
-        s = None
-        for t in cc.top('day', limit=3):
-            s = t
-        choices = s.flair.choices()
+        cross_post = top_meme.crosspost(subreddit=Crypto_Markets,
+                                        send_replies=False)
+        choices = cross_post.flair.choices()
         template_id = next(x for x in choices
                            if x['flair_text_editable'])['flair_template_id']
-        nsfw = False
+        cross_post.flair.select(template_id, final_winner_flair)
         if top_meme.over_18:
-            nsfw = True
-        spoiler = False
+            cross_post.mod.nsfw()
         if top_meme.spoiler:
-            spoiler = True
-        cross_post = top_meme.crosspost(subreddit=cc, send_replies=False, flair_id=template_id,
-                                        flair_text=final_winner_flair, nsfw=nsfw, spoiler=spoiler)
+            cross_post.mod.spoiler()
         top_meme_comment = cross_post.reply(top_meme_comment_info)
-        top_meme_comment.distinguish(how='yes', sticky=True)
+        top_meme_comment.mod.distinguish(how='yes', sticky=True)
 
 
 # checking for repost
