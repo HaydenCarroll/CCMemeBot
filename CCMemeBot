@@ -44,7 +44,8 @@ def get_memes():
     global last_runner_up_memes
     global last_runner_up_memes_backup_file
     global last_memes_backup_file
-
+    print(top_meme_comment_custom_message)
+    print(flair)
     while(True):
         # deleting old memes from list
         memes.clear()
@@ -74,9 +75,9 @@ def get_memes():
         for submission in ccMemes.top('day', limit=100):
             print('Getting post #' + str(i) + ' ' + submission.title + '\n')
             # checking for flair
-            if submission.link_flair_text is not None and submission.link_flair_text.contains(flair):
+            if submission.link_flair_text is not None and submission.link_flair_text in flair:
                 flaired_memes.append(i - 1)
-            elif submission.link_flair_text is not None and submission.link_flair_text.contains(runner_up_flair):
+            elif submission.link_flair_text is not None and submission.link_flair_text in runner_up_flair:
                 flaired_runner_up_memes.append(i-1)
             else:
                 memes.append(submission)
