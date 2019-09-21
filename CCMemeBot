@@ -236,6 +236,7 @@ def get_hot():
             break
     return i
 
+
 # checking for repost
 def is_repost(check_meme):
     global top_meme
