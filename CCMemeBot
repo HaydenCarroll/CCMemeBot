@@ -44,21 +44,19 @@ def get_memes():
     global last_runner_up_memes
     global last_runner_up_memes_backup_file
     global last_memes_backup_file
-    print(top_meme_comment_custom_message)
-    print(flair)
     while(True):
         # deleting old memes from list
         memes.clear()
         flaired_memes.clear()
         load_files()
         if len(last_memes) > 5:
-            oldest_meme = len(last_memes) - 1
+            oldest_meme = 0
             while len(last_memes) > 5:
                 last_memes.pop(oldest_meme)
                 oldest_meme -= 1
 
         if len(last_runner_up_memes) > 5:
-            oldest_meme = len(last_runner_up_memes) - 1
+            oldest_meme = 0
             while len(last_runner_up_memes) > 5:
                 last_runner_up_memes.pop(oldest_meme)
                 oldest_meme -= 1
@@ -179,8 +177,8 @@ def assign_top_meme():
         while memes[i] in last_memes:
             i += 1
             if i == len(memes) - 0:
-                print("No new memes")
-                i = 0
+                print("No new memes, sorting by hot")
+                i = get_hot()
                 break
 
         top_meme = memes[i]
@@ -211,6 +209,32 @@ def assign_top_meme():
         top_meme_comment = cross_post.reply(top_meme_comment_info)
         top_meme_comment.mod.distinguish(how='yes', sticky=True)
 
+
+# sorting by hot instead
+def get_hot():
+    # getting top 100 memes in hot instead
+    memes.clear()
+    i = 1
+    for submission in ccMemes.hot(limit=100):
+        print('Getting hot post #' + str(i) + ' ' + submission.title + '\n')
+        # checking for flair
+        if submission.link_flair_text is not None and submission.link_flair_text in flair:
+            flaired_memes.append(i - 1)
+        elif submission.link_flair_text is not None and submission.link_flair_text in runner_up_flair:
+            flaired_runner_up_memes.append(i - 1)
+        else:
+            memes.append(submission)
+        i += 1
+
+    # comparing with old memes
+    i = 0
+    while memes[i] in last_memes:
+        i += 1
+        if i == len(memes):
+            print("No new memes")
+            i = 0
+            break
+    return i
 
 # checking for repost
 def is_repost(check_meme):
