@@ -2,6 +2,7 @@ import praw
 import time
 import pickle
 import datetime
+import prawcore
 from configparser import ConfigParser
 r = praw.Reddit("CCMemeBot")
 ccMemes = r.subreddit("cryptocurrencymemes")
@@ -45,56 +46,60 @@ def get_memes():
     global last_runner_up_memes_backup_file
     global last_memes_backup_file
     while(True):
-        # deleting old memes from list
-        memes.clear()
-        flaired_memes.clear()
-        load_files()
-        if len(last_memes) > 5:
-            oldest_meme = 0
-            while len(last_memes) > 5:
-                last_memes.pop(oldest_meme)
-                oldest_meme -= 1
+        try:
+            # deleting old memes from list
+            memes.clear()
+            flaired_memes.clear()
+            load_files()
+            if len(last_memes) > 5:
+                oldest_meme = 0
+                while len(last_memes) > 5:
+                    last_memes.pop(oldest_meme)
+                    oldest_meme -= 1
 
-        if len(last_runner_up_memes) > 5:
-            oldest_meme = 0
-            while len(last_runner_up_memes) > 5:
-                last_runner_up_memes.pop(oldest_meme)
-                oldest_meme -= 1
+            if len(last_runner_up_memes) > 5:
+                oldest_meme = 0
+                while len(last_runner_up_memes) > 5:
+                    last_runner_up_memes.pop(oldest_meme)
+                    oldest_meme -= 1
 
-        # deleting old runner up memes from list
-        if len(last_runner_up_memes) > 5:
-            oldest_meme = len(last_runner_up_memes) - 1
-            while len(last_runner_up_memes) > 5:
-                memes.pop(oldest_meme)
-                oldest_meme -= 1
+            # deleting old runner up memes from list
+            if len(last_runner_up_memes) > 5:
+                oldest_meme = len(last_runner_up_memes) - 1
+                while len(last_runner_up_memes) > 5:
+                    memes.pop(oldest_meme)
+                    oldest_meme -= 1
 
-        # getting top 100 memes
-        i = 1
-        for submission in ccMemes.top('day', limit=100):
-            print('Getting post #' + str(i) + ' ' + submission.title + '\n')
-            # checking for flair
-            if submission.link_flair_text is not None and submission.link_flair_text in flair:
-                flaired_memes.append(i - 1)
-            elif submission.link_flair_text is not None and submission.link_flair_text in runner_up_flair:
-                flaired_runner_up_memes.append(i-1)
-            else:
-                memes.append(submission)
-            i += 1
+            # getting top 100 memes
+            i = 1
+            for submission in ccMemes.top('day', limit=100):
+                print('Getting post #' + str(i) + ' ' + submission.title + '\n')
+                # checking for flair
+                if submission.link_flair_text is not None and submission.link_flair_text in flair:
+                    flaired_memes.append(i - 1)
+                elif submission.link_flair_text is not None and submission.link_flair_text in runner_up_flair:
+                    flaired_runner_up_memes.append(i-1)
+                else:
+                    memes.append(submission)
+                i += 1
 
-        # replacing memes with flaired memes
-        if len(flaired_memes) > 0:
-            priority_memes = []
-            for flaired_meme in flaired_memes:
-                if not is_repost(memes[flaired_meme]):
-                    priority_memes.append(memes[flaired_meme])
+            # replacing memes with flaired memes
+            if len(flaired_memes) > 0:
+                priority_memes = []
+                for flaired_meme in flaired_memes:
+                    if not is_repost(memes[flaired_meme]):
+                        priority_memes.append(memes[flaired_meme])
 
-            if len(priority_memes) > 0:
-                memes = priority_memes
+                if len(priority_memes) > 0:
+                    memes = priority_memes
 
-        assign_top_meme()
-        #assign_runner_up_meme()
-        save_files()
-        time.sleep(hours_to_wait)
+            assign_top_meme()
+
+            # assign_runner_up_meme()
+            save_files()
+            time.sleep(hours_to_wait)
+        except prawcore.ServerError:
+            time.sleep(60)
 
 
 # assigning the runner up meme
