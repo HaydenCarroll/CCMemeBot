@@ -95,7 +95,7 @@ def get_memes():
 
             assign_top_meme()
 
-            # assign_runner_up_meme()
+            delete_old_posts()
             save_files()
             time.sleep(hours_to_wait)
         except prawcore.ServerError:
@@ -322,6 +322,27 @@ def save_files():
         print('error')
     last_runner_up_memes_backup_file.close()
     last_memes_backup_file.close()
+
+
+# deleting old memes older than 12 hours
+def delete_old_posts():
+    global last_memes
+    current_time = int(time.time())
+    recent_post = last_memes[len(last_memes)-1]
+    print("\nMost recent post "+recent_post.title)
+    my_memes = []
+    for meme in Crypto_Markets.hot(limit=500):
+        if meme.author.name == "CCMemeBot":
+            print("adding "+meme.title+" to my memes list")
+            my_memes.append(meme)
+    for meme in my_memes:
+        hours_since_post = ((int(current_time)-int(meme.created_utc))/60)/60
+        if meme == recent_post or hours_since_post < 11:
+            print("Not deleting "+meme.title+" posted "+str(hours_since_post)+" hours ago")
+            continue
+        else:
+            print("Deleting "+meme.title+" posted "+str(hours_since_post)+" hours ago")
+            meme.mod.remove()
 
 
 get_memes()
