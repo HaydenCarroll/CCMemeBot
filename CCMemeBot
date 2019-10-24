@@ -54,8 +54,8 @@ def get_memes():
         is_first_run = False
         cur_time = datetime.datetime.now()
         tom_time = datetime.datetime.now() + timedelta(days=1)
-        tom_time = tom_time.replace(hour=8, minute=0)
-        cur_time_next = cur_time.replace(hour=20, minute=0)
+        tom_time = tom_time.replace(hour=6, minute=0)
+        cur_time_next = cur_time.replace(hour=18, minute=0)
         tod_time_difference = cur_time_next - cur_time
         tod_time_difference_hours = tod_time_difference.total_seconds() / 3600
         tom_time_difference = tom_time - cur_time
