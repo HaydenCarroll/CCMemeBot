@@ -97,6 +97,7 @@ def get_memes():
 
             delete_old_posts()
             save_files()
+            print("Finished Waiting " + str(hours_to_wait / 60 / 60) + " hours")
             time.sleep(hours_to_wait)
         except prawcore.ServerError:
             time.sleep(60)
@@ -331,7 +332,7 @@ def delete_old_posts():
     recent_post = last_memes[len(last_memes)-1]
     print("\nMost recent post "+recent_post.title)
     my_memes = []
-    for meme in Crypto_Markets.hot(limit=500):
+    for meme in Crypto_Markets.hot(limit=1000):
         if meme.author.name == "CCMemeBot":
             print("adding "+meme.title+" to my memes list")
             my_memes.append(meme)
