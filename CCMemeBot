@@ -3,6 +3,7 @@ import time
 import pickle
 import datetime
 import prawcore
+from datetime import timedelta
 from configparser import ConfigParser
 r = praw.Reddit("CCMemeBot")
 ccMemes = r.subreddit("cryptocurrencymemes")
@@ -33,8 +34,10 @@ winner_flair = config['Settings']['winner_flair_winner']
 runner_up_winner_flair = config['Settings']['runner_up_winner_flair']
 hours_to_wait = int(config['Settings']['time_between_posts']) * MILLIS_IN_HOUR
 date = None
+is_first_run = True
 
-# main funciton
+
+# main function
 def get_memes():
     global top_meme
     global memes
@@ -45,6 +48,28 @@ def get_memes():
     global last_runner_up_memes
     global last_runner_up_memes_backup_file
     global last_memes_backup_file
+    global is_first_run
+
+    if is_first_run:
+        is_first_run = False
+        cur_time = datetime.datetime.now()
+        tom_time = datetime.datetime.now() + timedelta(days=1)
+        tom_time = tom_time.replace(hour=8, minute=0)
+        cur_time_next = cur_time.replace(hour=20, minute=0)
+        tod_time_difference = cur_time_next - cur_time
+        tod_time_difference_hours = tod_time_difference.total_seconds() / 3600
+        tom_time_difference = tom_time - cur_time
+        tom_time_difference_hours = tom_time_difference.total_seconds() / 3600
+        print("currentDatetime " + str(cur_time))
+        print("next today " + str(cur_time_next) + " difference is " + str(tod_time_difference_hours))
+        print("next tomorrow " + str(tom_time) + " difference is " + str(tom_time_difference_hours))
+        if tod_time_difference.total_seconds() > 0:
+            print("Sleeping for " + str(tod_time_difference_hours) + " hours")
+            time.sleep(tod_time_difference.total_seconds())
+        else:
+            print("Sleeping for " + str(tom_time_difference_hours) + " hours")
+            time.sleep(tom_time_difference.total_seconds())
+    print()
     while(True):
         try:
             # deleting old memes from list
